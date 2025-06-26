@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>我们认识了多久</title>
+
+  <link rel="icon" href="image/logo.png" type="image/png">
+  <link rel="apple-touch-icon" href="image/logo.png" sizes="1024x1024">
+  <link rel="icon" href="image/logo.png" sizes="1024x1024" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lunar-javascript/1.7.2/lunar.min.js" defer></script>
+
+  <style>
+    :root{--transition-duration:.4s;--transition-easing:ease-in-out;}
+    body{
+      margin:0;height:100vh;display:flex;align-items:center;justify-content:center;
+      font-family:'Nunito',-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: cover;
+      background-attachment: fixed;
+      overflow:hidden;
+      transition: background-image 1s ease-in-out;
+    }
+
+    #loading-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,.15);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);opacity:1;visibility:visible;transition:opacity .6s ease-out,visibility .6s ease-out;}
+    #loading-overlay.hidden{opacity:0;visibility:hidden;}
+    .loader{border:4px solid rgba(0,0,0,.1);border-top:4px solid #111;border-radius:50%;width:60px;height:60px;animation:spin 1.2s linear infinite;}
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    .loading-text{margin-top:20px;font-size:1.2em;color:#111;font-weight:700;}
+
+    .glass{position:relative;background:rgba(255,255,255,.15);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:50px 60px;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,.25);color:#111;text-align:center;opacity:0;visibility:hidden;}
+    .glass.is-loaded{opacity:1;visibility:visible;animation:slideInFade 1s cubic-bezier(.22,1,.36,1) forwards;}
+    @keyframes slideInFade{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+    .content-wrapper{transition:opacity var(--transition-duration) var(--transition-easing);}
+    .content-wrapper.is-transitioning{opacity:0;}
+
+    h1{font-size:1.5em;font-weight:400;margin:0 auto 40px;max-width:90%;min-height:3em;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;line-height:1.4;}
+    .title-segment{display:inline-block;transition:filter .5s,opacity .5s,transform .3s;}
+    .glass.is-focused .title-segment:not(.is-active){filter:blur(4px);}
+    .glass.is-focused .title-segment.is-active .name{transform:scale(1.15);}
+    .name{font-weight:700;cursor:pointer;display:inline-block;transition:transform .3s;}
+
+    .top-left-back-button{position:absolute;top:25px;left:25px;width:32px;height:32px;background-color:rgba(0,0,0,.08);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s ease;opacity:1;visibility:visible;}
+    .top-left-back-button:hover{background-color:rgba(0,0,0,.15);transform:scale(1.05);}
+    .top-left-back-button::before{content:'';width:10px;height:10px;border-top:2px solid #333;border-left:2px solid #333;transform:translateX(2px) rotate(-45deg);}
+    .top-left-back-button.is-hidden{opacity:0;visibility:hidden;pointer-events:none;}
+    
+    .time-row{display:flex;justify-content:center;align-items:baseline;gap:2.5rem;font-size:4rem;font-weight:700;line-height:1;transition:filter .5s;}
+    .glass.is-focused .time-row{filter:blur(4px);}
+    .time-unit{display:flex;align-items:baseline;gap:.5rem;}
+    .digit-group{display:flex;}
+    .digit-container{width:1em;height:1.5em;overflow:hidden;position:relative;}
+    .digit-list{display:flex;flex-direction:column;transition:transform .8s cubic-bezier(.68,-.55,.27,1.55);}
+    .digit-list div{height:1.5em;text-align:center;line-height:1.5em;}
+    .unit-label{font-size:.3em;font-weight:400;text-transform:uppercase;}
+
+    #birthday-display{display:none;font-size:4rem;font-weight:700;line-height:1.2;align-items:center;justify-content:center;}
+    #birthday-display .birthday-text{background:linear-gradient(45deg,#ff007f,#ffae00,#48ff00,#00d5ff,#7a00ff);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:gradient-text 4s linear infinite;}
+    @keyframes gradient-text{to{background-position:200% center}}
+    .glass.is-birthday .time-row{display:none;}
+    .glass.is-birthday #birthday-display{display:flex;}
+
+    footer{position:fixed;bottom:0;width:100%;background-color:rgba(51,51,51,.7);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);color:white;padding:10px;text-align:center;font-size:14px;}
+    footer #hitokoto_text{margin-bottom:5px;}
+
+    @media(max-width:768px){
+      .glass{padding:30px 25px;margin:15px;}
+      h1{font-size:1.15em;margin-bottom:25px;line-height:1.5;max-width:100%;}
+      .top-left-back-button{top:15px;left:15px;}
+      .time-row,#birthday-display{flex-direction:column;align-items:center;gap:1.2rem;font-size:2.5rem;}
+      footer{padding:15px 10px;font-size:13px;line-height:1.6;}
+      footer p{margin:0 15px;}
+      footer #hitokoto_text{margin-bottom:8px;}
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-overlay">
+    <div class="loader"></div>
+    <p class="loading-text">加载中...</p>
+  </div>
+  
+  <div class="glass">
+    <a id="back-to-main" class="top-left-back-button is-hidden" title="返回"></a>
+    <div class="content-wrapper">
+      <h1 id="main-title"></h1>
+      <div class="time-row">
+        <div class="time-unit"><div id="days"    class="digit-group"></div><span class="unit-label">天</span></div>
+        <div class="time-unit"><div id="hours"   class="digit-group"></div><span class="unit-label">小时</span></div>
+        <div class="time-unit"><div id="minutes" class="digit-group"></div><span class="unit-label">分钟</span></div>
+        <div class="time-unit"><div id="seconds" class="digit-group"></div><span class="unit-label">秒</span></div>
+      </div>
+      <div id="birthday-display"></div>
+    </div>
+  </div>
+
+  <footer>
+    <p id="hitokoto_text">正在获取今日一言...</p>
+    <p id="copyright"></p>
+  </footer>
+
+<script>
+'use strict';
+
+/**
+ * =================================================================
+ * 中央配置文件 (CENTRAL CONFIGURATION)
+ * -----------------------------------------------------------------
+ * 修改此处信息，即可轻松自定义页面内容。
+ * =================================================================
+ */
+const CONFIG = {
+  /**
+   * 主要倒计时目标日期 (格式: YYYY-MM-DDTHH:mm:ss)
+   */
+  mainTargetDate: '2008-09-01T00:00:00',
+
+  /**
+   * 人员信息配置
+   * key: 唯一标识符，请使用英文
+   * name: 显示的名称
+   * birthMonth: 生日所在月份
+   * birthDay: 生日所在日期
+   * isLunar: 生日是否为农历 (true/false)
+   */
+  people: [
+    { key: 'mikasa', name: 'Mikasa', birthMonth: 4, birthDay: 11, isLunar: false },
+    { key: 'Meason', name: 'Meason', birthMonth: 4, birthDay: 12, isLunar: true },
+  ],
+
+  /**
+   * 背景图片配置
+   */
+  backgrounds: {
+    desktop: 'image/pc.jpg',
+    mobile: 'image/m.jpg',
+  },
+
+  /**
+   * 页脚版权信息
+   */
+  footer: {
+    copyright: '&copy; 2025 By Mikasa. All Rights Reserved.',
+  },
+
+  /**
+   * 第三方服务 API
+   */
+  api: {
+    hitokoto: 'https://v1.hitokoto.cn?c=i',
+    time: 'https://timeapi.io/api/Time/current/zone?timeZone=Asia/Shanghai',
+  },
+};
+
+
+/**
+ * =================================================================
+ * 应用状态管理 (APP STATE)
+ * -----------------------------------------------------------------
+ * 存储应用在运行时的动态数据。
+ * =================================================================
+ */
+const STATE = {
+  currentMode: null,    // 'together' 或人员的 key (e.g., 'mikasa')
+  targetDate: null,     // 当前倒计时的目标 Date 对象
+  timerId: null,        // setInterval 的 ID
+  networkTimeOffset: 0, // 本地与网络时间的毫秒差
+};
+
+
+/**
+ * =================================================================
+ * DOM 元素引用 (DOM ELEMENTS)
+ * -----------------------------------------------------------------
+ * 集中管理所有需要操作的 DOM 元素。
+ * =================================================================
+ */
+const DOM = {
+  loadingOverlay: document.getElementById('loading-overlay'),
+  glass: document.querySelector('.glass'),
+  contentWrapper: document.querySelector('.content-wrapper'),
+  mainTitle: document.getElementById('main-title'),
+  backBtn: document.getElementById('back-to-main'),
+  birthdayDisplay: document.getElementById('birthday-display'),
+  copyright: document.getElementById('copyright'),
+  hitokotoText: document.getElementById('hitokoto_text'),
+  timeRow: document.querySelector('.time-row'),
+};
+
+
+/**
+ * =================================================================
+ * 服务模块 (SERVICES)
+ * -----------------------------------------------------------------
+ * 负责数据获取与处理，不直接操作 DOM。
+ * =================================================================
+ */
+const Services = {
+  /**
+   * 时间服务，负责所有日期和时间的计算
+   */
+  Time: {
+    /**
+     * 初始化网络时间，获取与本地时间的偏移
+     */
+    async init() {
+      try {
+        const ctrl = new AbortController();
+        const timeout = setTimeout(() => ctrl.abort(), 3000);
+        const res = await fetch(CONFIG.api.time, { signal: ctrl.signal });
+        clearTimeout(timeout);
+        if (!res.ok) throw new Error('Network response was not ok.');
+        const data = await res.json();
+        const networkTime = new Date(data.dateTime).getTime();
+        STATE.networkTimeOffset = networkTime - Date.now();
+      } catch (error) {
+        console.error('Failed to fetch network time, falling back to local time.', error);
+        STATE.networkTimeOffset = 0;
+      }
+    },
+
+    /**
+     * 获取当前同步后的时间
+     * @returns {Date} 当前时间的 Date 对象
+     */
+    now() {
+      return new Date(Date.now() + STATE.networkTimeOffset);
+    },
+    
+    /**
+     * 判断今天是否为指定人员的生日
+     * @param {object} person - 人员配置对象
+     * @returns {boolean}
+     */
+    isBirthdayToday(person) {
+      const today = this.now();
+      if (person.isLunar) {
+        const lunarToday = Lunar.fromDate(today);
+        return lunarToday.getMonth() === person.birthMonth && lunarToday.getDay() === person.birthDay;
+      } else {
+        return today.getMonth() + 1 === person.birthMonth && today.getDate() === person.birthDay;
+      }
+    },
+    
+    /**
+     * 计算指定人员的下一个生日日期
+     * @param {object} person - 人员配置对象
+     * @returns {{date: Date, double: boolean, label: string, passedFirst: boolean, passedAll: boolean}}
+     */
+    getNextBirthday(person) {
+      const today = this.now();
+      
+      if (!person.isLunar) {
+        let year = today.getFullYear();
+        let birthDate = new Date(year, person.birthMonth - 1, person.birthDay);
+        let passedAll = birthDate < today;
+        if (passedAll) birthDate.setFullYear(++year);
+        return { date: birthDate, double: false, label: '', passedFirst: false, passedAll };
+      }
+
+      const getSolarDate = (year, isLeap) => {
+        const lunar = Lunar.fromYmd(year, person.birthMonth, person.birthDay, isLeap);
+        const solar = lunar.getSolar();
+        return new Date(solar.getYear(), solar.getMonth() - 1, solar.getDay());
+      };
+
+      const buildYearData = year => {
+        const leapMonth = LunarYear.fromYear(year).getLeapMonth();
+        const dates = [{ d: getSolarDate(year, false), type: '正常月' }];
+        if (leapMonth === person.birthMonth) {
+          dates.push({ d: getSolarDate(year, true), type: '闰月' });
+        }
+        return { dates, hasLeap: leapMonth === person.birthMonth };
+      };
+
+      let currentYear = today.getFullYear();
+      let { dates, hasLeap } = buildYearData(currentYear);
+
+      if (dates.every(item => item.d < today)) {
+        currentYear++;
+        ({ dates, hasLeap } = buildYearData(currentYear));
+        return { date: dates[0].d, double: hasLeap, label: hasLeap ? dates[0].type : '', passedFirst: false, passedAll: true };
+      }
+
+      const target = dates.find(item => item.d >= today);
+      const passedFirst = hasLeap && dates[0].d < today;
+      return { date: target.d, double: hasLeap, label: hasLeap ? target.type : '', passedFirst, passedAll: false };
+    }
+  },
+
+  /**
+   * API 服务，负责调用第三方 API
+   */
+  Api: {
+    /**
+     * 获取一言
+     */
+    async fetchHitokoto() {
+      try {
+        const res = await fetch(CONFIG.api.hitokoto);
+        const data = await res.json();
+        Renderer.renderHitokoto(data);
+      } catch (error) {
+        console.error('Failed to fetch Hitokoto.', error);
+        DOM.hitokotoText.textContent = '今日一言获取失败';
+      }
+    },
+  },
+};
+
+
+/**
+ * =================================================================
+ * 视图渲染模块 (RENDERER)
+ * -----------------------------------------------------------------
+ * 负责所有 DOM 操作和页面内容的渲染。
+ * =================================================================
+ */
+const Renderer = {
+  /**
+   * 更新倒计时视图
+   * @param {number} totalSeconds - 剩余总秒数
+   */
+  updateCountdownView(totalSeconds) {
+    const s = Math.max(0, totalSeconds);
+    this._updateDigitGroup('days', Math.floor(s / 86400));
+    this._updateDigitGroup('hours', Math.floor((s % 86400) / 3600));
+    this._updateDigitGroup('minutes', Math.floor((s % 3600) / 60));
+    this._updateDigitGroup('seconds', s % 60);
+  },
+
+  /**
+   * 渲染标题
+   * @param {string} html - 要渲染的 HTML 字符串
+   */
+  renderTitle(html) {
+    DOM.mainTitle.innerHTML = html;
+  },
+  
+  /**
+   * 渲染一言
+   * @param {object} data - 从 API 获取的数据
+   */
+  renderHitokoto(data) {
+    DOM.hitokotoText.textContent = `“${data.hitokoto}”`;
+    const from = document.createElement('p');
+    from.textContent = `— ${data.from_who || ''}《${data.from}》`;
+    DOM.hitokotoText.parentNode.insertBefore(from, DOM.hitokotoText.nextSibling);
+  },
+
+  /**
+   * 渲染生日祝福页面
+   * @param {object} person - 当前生日的人员对象
+   */
+  renderBirthdayPage(person) {
+    let birthdayHTML = '';
+    switch (person.key) {
+      case 'mikasa':
+        birthdayHTML = `<span class="birthday-text">祝 ${person.name} 生日快乐~🎂</span>`;
+        break;
+      case 'linlin':
+        birthdayHTML = `<span class="birthday-text">Happy Birthday, ${person.name}! 🎉</span>`;
+        break;
+      default:
+        birthdayHTML = `<span class="birthday-text">祝 ${person.name} 生日快乐~🎂</span>`;
+    }
+    DOM.birthdayDisplay.innerHTML = birthdayHTML;
+  },
+
+  /**
+   * 应用配置文件中的背景
+   */
+  applyBackground() {
+    const bg = window.innerWidth <= 768 ? CONFIG.backgrounds.mobile : CONFIG.backgrounds.desktop;
+    document.body.style.backgroundImage = `url('${bg}')`;
+  },
+  
+  /**
+   * 应用配置文件中的页脚
+   */
+  applyFooter() {
+    DOM.copyright.innerHTML = CONFIG.footer.copyright;
+  },
+
+  /**
+   * 数字滚动器的私有辅助函数
+   */
+  _updateDigitGroup(id, value) {
+    const group = document.getElementById(id);
+    if (!group) return;
+    const strValue = (id === 'days') ? String(value) : String(value).padStart(2, '0');
+    if (group.dataset.value === strValue) return;
+    group.dataset.value = strValue;
+    while (group.children.length < strValue.length) group.appendChild(this._createDigitScroller());
+    while (group.children.length > strValue.length) group.removeChild(group.firstChild);
+    [...strValue].forEach((char, i) => {
+      const list = group.children[i].querySelector('.digit-list');
+      if (list) list.style.transform = `translateY(-${parseInt(char) * 1.5}em)`;
+    });
+  },
+
+  /**
+   * 创建单个数字滚动器的私有辅助函数
+   */
+  _createDigitScroller() {
+    const container = document.createElement('div');
+    container.className = 'digit-container';
+    const list = document.createElement('div');
+    list.className = 'digit-list';
+    for (let i = 0; i <= 9; i++) {
+      const digit = document.createElement('div');
+      digit.textContent = i;
+      list.appendChild(digit);
+    }
+    container.appendChild(list);
+    return container;
+  }
+};
+
+
+/**
+ * =================================================================
+ * 主应用控制器 (APP CONTROLLER)
+ * -----------------------------------------------------------------
+ * 负责协调所有模块，管理应用流程和事件。
+ * =================================================================
+ */
+const App = {
+  /**
+   * 初始化应用
+   */
+  async init() {
+    await Services.Time.init();
+    
+    Renderer.applyBackground();
+    Renderer.applyFooter();
+    Services.Api.fetchHitokoto();
+
+    this.bindEvents();
+    
+    DOM.loadingOverlay.classList.add('hidden');
+    DOM.glass.classList.add('is-loaded');
+
+    this.updateView('together');
+  },
+
+  /**
+   * 绑定所有事件监听器
+   */
+  bindEvents() {
+    // 永久事件
+    DOM.backBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.updateView('together');
+    });
+    window.addEventListener('resize', Renderer.applyBackground);
+    
+    // 动态事件（在视图更新后绑定）
+    this.bindDynamicEvents();
+  },
+
+  /**
+   * 绑定需要随视图更新的动态事件
+   */
+  bindDynamicEvents() {
+    if (STATE.currentMode === 'together') {
+      CONFIG.people.forEach(person => {
+        const el = document.getElementById(`name-${person.key}`);
+        if (el) {
+          el.onclick = () => this.updateView(person.key);
+          // 鼠标悬浮特效 (仅桌面端)
+          if (!('ontouchstart' in window) && navigator.maxTouchPoints <= 0) {
+            el.onmouseenter = () => {
+              DOM.glass.classList.add('is-focused');
+              el.classList.add('is-active');
+            };
+            el.onmouseleave = () => {
+              DOM.glass.classList.remove('is-focused');
+              el.classList.remove('is-active');
+            };
+          }
+        }
+      });
+    }
+  },
+  
+  /**
+   * 启动倒计时
+   */
+  startTimer() {
+    this.stopTimer();
+    const tick = () => {
+      const diff = (STATE.currentMode === 'together')
+        ? (Services.Time.now() - STATE.targetDate)
+        : (STATE.targetDate - Services.Time.now());
+      Renderer.updateCountdownView(Math.floor(diff / 1000));
+    };
+    tick();
+    STATE.timerId = setInterval(tick, 1000);
+  },
+  
+  /**
+   * 停止倒计时
+   */
+  stopTimer() {
+    if (STATE.timerId) clearInterval(STATE.timerId);
+    STATE.timerId = null;
+  },
+
+  /**
+   * 更新视图的主控制器
+   * @param {string} newMode - 新的模式 ('together' 或人员 key)
+   */
+  updateView(newMode) {
+    if (STATE.currentMode === newMode) return;
+    STATE.currentMode = newMode;
+    
+    DOM.contentWrapper.classList.add('is-transitioning');
+    DOM.glass.classList.remove('is-focused');
+    
+    setTimeout(() => {
+      let titleHTML = '';
+      if (newMode === 'together') {
+        DOM.backBtn.classList.add('is-hidden');
+        DOM.glass.classList.remove('is-birthday');
+        STATE.targetDate = new Date(CONFIG.mainTargetDate);
+
+        titleHTML = CONFIG.people.map(p =>
+          `<span class="title-segment name-wrapper" id="name-${p.key}"><span class="name">${p.name}</span></span>`
+        ).join('<span class="title-segment">&nbsp;和&nbsp;</span>') + '<span class="title-segment">&nbsp;已经认识了</span>';
+
+        Renderer.renderTitle(titleHTML);
+        this.startTimer();
+      } else {
+        DOM.backBtn.classList.remove('is-hidden');
+        const person = CONFIG.people.find(p => p.key === newMode);
+        if (!person) return; // 安全检查
+
+        if (Services.Time.isBirthdayToday(person)) {
+          DOM.glass.classList.add('is-birthday');
+          Renderer.renderBirthdayPage(person);
+          titleHTML = `<span class="title-segment">${person.name}</span>`;
+          this.stopTimer();
+        } else {
+          DOM.glass.classList.remove('is-birthday');
+          const birthInfo = Services.Time.getNextBirthday(person);
+          STATE.targetDate = birthInfo.date;
+          
+          if(birthInfo.double) titleHTML += `<span class="title-segment">今年你有两个生日哦～</span>`;
+          if(birthInfo.passedFirst) titleHTML += `<span class="title-segment">第一个生日已经过啦～</span>`;
+          if(birthInfo.passedAll) titleHTML += `<span class="title-segment">今年生日已经过啦～</span>`;
+          const labelTxt = birthInfo.label ? `${birthInfo.label}生日` : '生日';
+          titleHTML += `<span class="title-segment">距离&nbsp;</span>
+                        <span class="title-segment name-wrapper"><span class="name">${person.name}</span></span>
+                        <span class="title-segment">&nbsp;的${labelTxt}还有</span>`;
+          this.startTimer();
+        }
+        Renderer.renderTitle(titleHTML);
+      }
+      
+      this.bindDynamicEvents();
+      DOM.contentWrapper.classList.remove('is-transitioning');
+    }, 400);
+  }
+};
+
+// =================================================================
+// 应用启动入口
+// =================================================================
+window.addEventListener('DOMContentLoaded', () => {
+  App.init();
+});
+</script>
+
+</body>
+</html>
